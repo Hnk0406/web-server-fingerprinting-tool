@@ -11,24 +11,32 @@ def input_take():
     sites=sys.argv[1:] #converts all the arguments into a list
     return sites
 
-def collect_banner(host, port=443): 
+def collect_banner(host, port=80): 
     """ function for collecting information from the server
      serevr port 80 is for http
        """
-    s = socket.socket()
-    s.settimeout(5)
+    try:
+        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        s.settimeout(5)
 
-    s.connect((host, port))
+        s.connect((host, port))
 
-    request = "HEAD / HTTP/1.1\r\nHost: " + host + "\r\n\r\n"
-    s.send(request.encode())
+        request = f"HEAD / HTTP/1.1\r\nHost: {host} \r\nCOnnection: close \r\n\r\n"
+        s.send(request.encode())
 
-    response = s.recv(1024)
+        response = b""
+        while 1:
+            data=s.recv(1024)
+            if not data:
+                break
+            response += data
+            #this loop is to make sure no data is lost even if it exceeds 1024 bytes
+        s.close()
 
-    s.close()
+        return response.decode(errors="ignore")
 
-    return response.decode(errors="ignore")
-
+    except socket.error as e:
+        return f"Connection error: {e}"
 
 """
 def parse_banner(response):
@@ -48,12 +56,10 @@ def scan(sites):
             print("\n")
             response=collect_banner(target)
             print("Scanning:", target)
-            result = analyze_banner(response,"HTTPS")
+            result = analyze_banner(response)
             print_result(result)
             print("\n")
         
-
-
         except Exception as e:
             print("Error:", e)
 
